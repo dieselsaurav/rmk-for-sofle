@@ -14,6 +14,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: 1.96.1  # pinned: vendored rmk fails on newer stable (pin! macro change)
           targets: thumbv7em-none-eabihf
           components: rust-src, llvm-tools, rustfmt
 
