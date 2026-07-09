@@ -30,6 +30,7 @@ use embedded_graphics::prelude::*;
 /// Hardware gate: if ॐ reads poorly on the physical panel, tweak threshold
 /// (try 60–110) and re-embed.  If still muddy, remove the OM draw call and
 /// the bindu halo in both renderers and shift other elements up.
+#[allow(dead_code)] // used by the central (status.rs) build only
 pub const OM: [u8; 90] = [
     // page 0 (rows 0-7)
     0, 0, 128, 192, 192, 192, 192, 192, 128, 0, 0, 48, 112, 240, 224, 192, 199, 199, 199, 194, 224, 240, 112, 48, 0, 0, 0, 0, 0, 0,

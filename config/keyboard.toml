@@ -266,10 +266,13 @@ resolution = 4
 # Central OLED — SSD1306 128x32 portrait, custom status renderer
 # (layer / WPM / BLE profile / battery / version). Event-driven only.
 # If content renders upside-down, change rotation to 270.
+# rotation = 0: text runs along the long (128 px) axis — reads vertically on
+# the portrait-mounted panel, allowing much larger fonts. If it reads
+# bottom-to-top for your mount, flip to rotation = 180.
 [split.central.display]
 driver = "ssd1306"
 size = "128x32"
-rotation = 90
+rotation = 0
 renderer = "crate::status::StatusRenderer"
 
 [split.central.display.protocol.i2c]
@@ -309,14 +312,15 @@ debounce_ms = 10
 
 # Peripheral OLED — decorative renderer with split-link ✓/✗ indicator,
 # WPM equalizer and battery. render_interval drives the idle animation.
-# Right (peripheral) display — decorative renderer with split-link check
-# indicator, WPM equalizer and battery.
+# Right (peripheral) display — Parix screen: glitching P keycap logo centred,
+# split-link status left, battery right (port of the ZMK custom status
+# screen). Landscape (rotation 0), 150 ms tick drives the glitch animation.
 [split.peripheral.display]
 driver = "ssd1306"
 size = "128x32"
-rotation = 90
-renderer = "crate::trishul::TrishulRenderer"
-render_interval = 400
+rotation = 0
+renderer = "crate::parix::ParixRenderer"
+render_interval = 150
 
 [split.peripheral.display.protocol.i2c]
 instance = "TWISPI0"

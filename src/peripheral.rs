@@ -5,8 +5,8 @@ use rmk::macros::rmk_peripheral;
 
 mod bitmaps;
 mod layer_names;
+mod parix;
 mod rgb;
-mod trishul;
 
 #[rmk_peripheral(id = 0)]
 mod keyboard_peripheral {
