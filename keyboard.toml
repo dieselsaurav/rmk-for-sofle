@@ -116,15 +116,19 @@ No No    No    No     No      No     _        _        MouseWheelLeft  MouseWhee
 """
 encoders = [["_", "_"], ["_", "_"]]
 
-[behavior]
-# Home-row-mod friendly tap-hold (mirrors ZMK tapping-term 200ms, require-prior-idle 150ms)
-tap_hold = { enable_hrm = true, prior_idle_time = "150ms", hold_timeout = "200ms" }
+# Home-row-mod friendly tap-hold ("morse" in RMK 0.8+); mirrors the ZMK
+# settings: tapping-term 200ms, require-prior-idle 150ms, quick-tap 175ms
+[behavior.morse]
+enable_flow_tap = true
+prior_idle_time = "150ms"
+hold_timeout = "200ms"
+gap_timeout = "175ms"
 
 [behavior.combo]
 timeout = "50ms"
 combos = [
     # Tier 1: essential (from the ZMK config)
-    { actions = ["MT(F,LShift)", "MT(J,RShift)"], output = "CapsWord" },
+    { actions = ["MT(F,LShift)", "MT(J,RShift)"], output = "CapsWordToggle" },
     { actions = ["W", "E"], output = "Escape" },
     { actions = ["I", "O"], output = "Backspace" },
     { actions = ["O", "P"], output = "Delete" },
@@ -133,9 +137,18 @@ combos = [
     { actions = ["MT(K,RCtrl)", "MT(L,RAlt)"], output = "Enter" },
     { actions = ["X", "C"], output = "WM(C,LGui)" },
     { actions = ["C", "V"], output = "WM(V,LGui)" },
-    # NOTE: ZMK tier-3 combos (cut, vertical symbol combos) trimmed to stay
-    # within RMK's default combo slots — re-add after raising the combo limit.
+    { actions = ["X", "V"], output = "WM(X,LGui)" },
+    # Tier 3: vertical symbol combos
+    { actions = ["MT(J,RShift)", "M"], output = "Minus" },
+    { actions = ["H", "N"], output = "WM(Minus,LShift)" },
+    { actions = ["MT(F,LShift)", "V"], output = "Equal" },
+    { actions = ["MT(S,LAlt)", "X"], output = "Grave" },
+    { actions = ["MT(L,RAlt)", "MT(Quote,RGui)"], output = "Semicolon" },
 ]
+
+[rmk]
+# 14 combos ported from ZMK (default slot limit is 8)
+combo_max_num = 16
 
 [storage]
 clear_storage = false
