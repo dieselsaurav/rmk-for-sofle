@@ -253,10 +253,13 @@ row_pins = ["P0_24", "P1_00", "P0_11", "P1_04", "P1_06"]
 col_pins = ["P0_02", "P1_15", "P1_13", "P1_11", "P0_10", "P0_09"]
 
 # Left rotary encoder (EC11, pro_micro A=21/B=20). resolution 4 = ZMK's
-# 80 steps / 20 detents per rotation.
+# 80 steps / 20 detents per rotation. internal_pullup is REQUIRED (ZMK used
+# GPIO_PULL_UP; the PCB has no external pull-ups) — without it the floating
+# A/B pins spew phantom rotation events that flood the split link.
 [[split.central.input_device.encoder]]
 pin_a = "P0_31"
 pin_b = "P0_29"
+internal_pullup = true
 phase = "resolution"
 resolution = 4
 
@@ -293,9 +296,11 @@ row_pins = ["P0_24", "P1_00", "P0_11", "P1_04", "P1_06"]
 col_pins = ["P0_09", "P0_10", "P1_11", "P1_13", "P1_15", "P0_02"]
 
 # Right rotary encoder (A/B swapped vs left, matching the ZMK overlay).
+# internal_pullup required — see the left encoder note.
 [[split.peripheral.input_device.encoder]]
 pin_a = "P0_29"
 pin_b = "P0_31"
+internal_pullup = true
 phase = "resolution"
 resolution = 4
 
