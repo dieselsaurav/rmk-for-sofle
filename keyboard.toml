@@ -1,0 +1,183 @@
+#
+# RMK port of the PandaKB Sofle ZMK config (github.com/dieselsaurav/zmk-for-sofle)
+#
+# Miryoku-style layout — QWERTY base, vim arrows (HJKL), GACS home row mods
+#   Layer 0: BASE    — QWERTY + home row mods + number row
+#   Layer 1: NAV     — vim arrows, clipboard, nav (hold SPACE)
+#   Layer 2: NUM     — numpad left hand (hold BSPC)
+#   Layer 3: MEDIA   — media, BT profiles (hold ESC)  [RGB/ext-power dropped: no RMK support yet]
+#   Layer 4: SYM     — symbols left hand (hold ENTER)
+#   Layer 5: FUN     — function keys left hand (hold DEL)
+#   Layer 6: MOUSE   — mouse movement, scroll, buttons (hold TAB)
+#
+# BLE keys (Vial custom keycodes): User0-7 = select profile BT0-BT7,
+#   User8 = next, User9 = prev, User10 = clear bond, User11 = toggle USB/BLE output
+#
+# Pin mapping (pro_micro -> nRF52840), same wiring as the ZMK overlays:
+#   rows 5,6,7,8,9        -> P0_24 P1_00 P0_11 P1_04 P1_06
+#   cols L 19,18,15,14,16,10 -> P0_02 P1_15 P1_13 P1_11 P0_10 P0_09  (right mirrored)
+#   encoders A/B 21,20    -> P0_31 P0_29 (left), swapped on right
+
+[keyboard]
+name = "sofle-rmk"
+product_name = "Sofle RMK"
+vendor_id = 0x4c4b
+product_id = 0x4643
+serial_number = "vial:f64c2b3c:000001"
+board = "nice!nano_v2"
+usb_enable = true
+
+[layout]
+rows = 5
+cols = 12
+layers = 7
+matrix_map = """
+(0,0) (0,1) (0,2) (0,3) (0,4) (0,5)             (0,6) (0,7) (0,8)  (0,9) (0,10) (0,11)
+(1,0) (1,1) (1,2) (1,3) (1,4) (1,5)             (1,6) (1,7) (1,8)  (1,9) (1,10) (1,11)
+(2,0) (2,1) (2,2) (2,3) (2,4) (2,5)             (2,6) (2,7) (2,8)  (2,9) (2,10) (2,11)
+(3,0) (3,1) (3,2) (3,3) (3,4) (3,5) (4,5) (4,6) (3,6) (3,7) (3,8)  (3,9) (3,10) (3,11)
+            (4,0) (4,1) (4,2) (4,3) (4,4) (4,7) (4,8) (4,9) (4,10) (4,11)
+"""
+
+[[layers]]
+name = "BASE"
+keys = """
+Grave            Kc1        Kc2        Kc3         Kc4         Kc5                                    Kc6  Kc7          Kc8         Kc9        Kc0            Equal
+Tab              Q          W          E           R           T                                      Y    U            I           O          P              Backspace
+MT(Escape,LCtrl) MT(A,LGui) MT(S,LAlt) MT(D,LCtrl) MT(F,LShift) G                                     H    MT(J,RShift) MT(K,RCtrl) MT(L,RAlt) MT(Quote,RGui) WM(No,LCtrl|LShift|LAlt|LGui)
+LShift           Z          X          C           V           B         AudioMute      Delete        N    M            Comma       Dot        Slash          Escape
+                            LGui       LAlt        LT(3,Escape) LT(1,Space) LT(6,Tab)   LT(4,Enter)   LT(2,Backspace)   LT(5,Delete) RAlt      RGui
+"""
+encoders = [["AudioVolUp", "AudioVolDown"], ["PageUp", "PageDown"]]
+
+[[layers]]
+name = "NAV"
+keys = """
+_  _     _     _      _       _                        _                  _         _         _         _        _
+No No    No    No     No      No                       WM(Z,LGui|LShift)  WM(V,LGui) WM(C,LGui) WM(X,LGui) WM(Z,LGui) No
+No LGui  LAlt  LCtrl  LShift  No                       Left               Down      Up        Right     CapsLock No
+No No    No    No     No      No     _        _        Insert             Home      PageDown  PageUp    End      No
+         _     _      No      No     No       Enter    Backspace          Delete    _         _
+"""
+encoders = [["_", "_"], ["_", "_"]]
+
+[[layers]]
+name = "NUM"
+keys = """
+_  _           _    _    _    _                             _   _       _      _     _     _
+No LeftBracket Kc7  Kc8  Kc9  RightBracket                  No  No      No     No    No    No
+No Semicolon   Kc4  Kc5  Kc6  Equal                         No  RShift  RCtrl  RAlt  RGui  No
+No Grave       Kc1  Kc2  Kc3  Backslash    _        _       No  No      No     No    No    No
+               _    _    Dot  Kc0          Minus    No      No  No      _      _
+"""
+encoders = [["_", "_"], ["_", "_"]]
+
+[[layers]]
+name = "MEDIA"
+keys = """
+_  _     _     _      _       _                        _          _               _             _           _               _
+No No    No    No     No      No                       No         No              No            No          No              No
+No LGui  LAlt  LCtrl  LShift  No                       No         MediaPrevTrack  AudioVolDown  AudioVolUp  MediaNextTrack  No
+No No    No    No     No      No     _        _        User11     User0           User1         User2       User3           User10
+         No    No     No      No     No       MediaStop MediaPlayPause AudioMute  _             _
+"""
+encoders = [["AudioVolUp", "AudioVolDown"], ["_", "_"]]
+
+[[layers]]
+name = "SYM"
+keys = """
+_  _                      _              _              _              _                                              _   _       _      _     _     _
+No WM(LeftBracket,LShift) WM(Kc7,LShift) WM(Kc8,LShift) WM(Kc9,LShift) WM(RightBracket,LShift)                        No  No      No     No    No    No
+No WM(Semicolon,LShift)   WM(Kc4,LShift) WM(Kc5,LShift) WM(Kc6,LShift) WM(Equal,LShift)                               No  RShift  RCtrl  RAlt  RGui  No
+No WM(Grave,LShift)       WM(Kc1,LShift) WM(Kc2,LShift) WM(Kc3,LShift) WM(Backslash,LShift)  _              _         No  No      No     No    No    No
+                          _              _              WM(Kc9,LShift) WM(Kc0,LShift)        WM(Minus,LShift) No      No  No      _      _
+"""
+encoders = [["_", "_"], ["_", "_"]]
+
+[[layers]]
+name = "FUN"
+keys = """
+_  _    _    _    _    _                                _   _       _      _     _     _
+No F12  F7   F8   F9   PrintScreen                      No  No      No     No    No    No
+No F11  F4   F5   F6   ScrollLock                       No  RShift  RCtrl  RAlt  RGui  No
+No F10  F1   F2   F3   Pause          _         _       No  No      No     No    No    No
+        _    _    Application  Space  Tab       No      No  No      _      _
+"""
+encoders = [["_", "_"], ["_", "_"]]
+
+[[layers]]
+name = "MOUSE"
+keys = """
+_  _     _     _      _       _                        _               _               _             _                _   _
+No No    No    No     No      No                       No              No              No            No               No  No
+No LGui  LAlt  LCtrl  LShift  No                       MouseLeft       MouseDown       MouseUp       MouseRight       No  No
+No No    No    No     No      No     _        _        MouseWheelLeft  MouseWheelDown  MouseWheelUp  MouseWheelRight  No  No
+         No    No     No      No     No       MouseBtn3 MouseBtn1      MouseBtn2       _             _
+"""
+encoders = [["_", "_"], ["_", "_"]]
+
+[behavior]
+# Home-row-mod friendly tap-hold (mirrors ZMK tapping-term 200ms, require-prior-idle 150ms)
+tap_hold = { enable_hrm = true, prior_idle_time = "150ms", hold_timeout = "200ms" }
+
+[behavior.combo]
+timeout = "50ms"
+combos = [
+    # Tier 1: essential (from the ZMK config)
+    { actions = ["MT(F,LShift)", "MT(J,RShift)"], output = "CapsWord" },
+    { actions = ["W", "E"], output = "Escape" },
+    { actions = ["I", "O"], output = "Backspace" },
+    { actions = ["O", "P"], output = "Delete" },
+    # Tier 2: high value
+    { actions = ["MT(S,LAlt)", "MT(D,LCtrl)"], output = "Tab" },
+    { actions = ["MT(K,RCtrl)", "MT(L,RAlt)"], output = "Enter" },
+    { actions = ["X", "C"], output = "WM(C,LGui)" },
+    { actions = ["C", "V"], output = "WM(V,LGui)" },
+    # NOTE: ZMK tier-3 combos (cut, vertical symbol combos) trimmed to stay
+    # within RMK's default combo slots — re-add after raising the combo limit.
+]
+
+[storage]
+clear_storage = false
+
+[ble]
+enabled = true
+# Same +8 dBm TX boost as the ZMK/PandaKB reference config
+default_tx_power = 8
+
+[split]
+connection = "ble"
+
+# ---- Left half = central ----
+[split.central]
+rows = 5
+cols = 6
+row_offset = 0
+col_offset = 0
+
+[split.central.matrix]
+row_pins = ["P0_24", "P1_00", "P0_11", "P1_04", "P1_06"]
+col_pins = ["P0_02", "P1_15", "P1_13", "P1_11", "P0_10", "P0_09"]
+
+[[split.central.input_device.encoder]]
+pin_a = "P0_31"
+pin_b = "P0_29"
+phase = "resolution"
+resolution = 4
+
+# ---- Right half = peripheral ----
+[[split.peripheral]]
+rows = 5
+cols = 6
+row_offset = 0
+col_offset = 6
+
+[split.peripheral.matrix]
+row_pins = ["P0_24", "P1_00", "P0_11", "P1_04", "P1_06"]
+col_pins = ["P0_09", "P0_10", "P1_11", "P1_13", "P1_15", "P0_02"]
+
+[[split.peripheral.input_device.encoder]]
+pin_a = "P0_29"
+pin_b = "P0_31"
+phase = "resolution"
+resolution = 4
