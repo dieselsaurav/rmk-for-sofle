@@ -1,83 +1,71 @@
 [package]
 name = "sofle-rmk"
 version = "0.1.0"
-authors = ["Haobo Gu <haobogu@outlook.com>"]
-description = "RMK firmware for the PandaKB Sofle (nice!nano, BLE split)"
-homepage = "https://github.com/haobogu/rmk"
-repository = "https://github.com/haobogu/rmk"
-readme = "README.md"
-edition = "2021"
+authors = ["Kumar Saurav <diesel.saurav@gmail.com>"]
+description = "PandaKB Sofle split keyboard firmware (RMK, nRF52840 / nice!nano, wireless BLE)"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-rmk = { git = "https://github.com/HaoboGu/rmk.git", default-features = false, rev = "962a64b", features = [
+rmk = { git = "https://github.com/HaoboGu/rmk", rev = "b98204928e9a8532064ce99add1f6c4c554e08c9", features = [
     "nrf52840_ble",
     "split",
-    "col2row",
     "async_matrix",
-    "storage",
-    "vial",
+    "adafruit_bl",
+    "ssd1306",
 ] }
-nrf-sdc = { git = "https://github.com/alexmoon/nrf-sdc", rev = "11d5c3c", features = [
+nrf-sdc = { git = "https://github.com/haobogu/nrf-sdc", rev = "ffe59a7aefaaa145a3d2474602f33387f80dcefa", features = [
     "defmt",
     "peripheral",
     "central",
     "nrf52840",
 ] }
-nrf-mpsl = { git = "https://github.com/alexmoon/nrf-sdc", rev = "11d5c3c", features = [
+nrf-mpsl = { git = "https://github.com/haobogu/nrf-sdc", rev = "ffe59a7aefaaa145a3d2474602f33387f80dcefa", features = [
     "defmt",
     "critical-section-impl",
     "nrf52840",
 ] }
-bt-hci = { version = "0.6", default-features = false, features = ["defmt"] }
+bt-hci = { version = "0.8", features = ["defmt"] }
 
 cortex-m = "0.7.7"
 cortex-m-rt = "0.7.5"
 embassy-time = { version = "0.5", features = ["tick-hz-32_768", "defmt", "defmt-timestamp-uptime"] }
-embassy-nrf = { version = "0.8", features = [
+embassy-nrf = { version = "0.10", features = [
     "defmt",
     "nrf52840",
     "time-driver-rtc1",
     "gpiote",
     "unstable-pac",
     "nfc-pins-as-gpio",
-    "reset-pin-as-gpio",
     "time",
 ] }
-embassy-executor = { version = "0.9", features = [
+embassy-executor= { version = "0.10", features = [
     "defmt",
-    "arch-cortex-m",
+    "platform-cortex-m",
     "executor-thread",
 ] }
 defmt = "1.0"
 defmt-rtt = "1.0"
 panic-probe = { version = "1.0", features = ["print-defmt"] }
 static_cell = "2"
+embedded-graphics = "0.8"
 
 rand = { version = "0.8.4", default-features = false }
 rand_core = { version = "0.6" }
 rand_chacha = { version = "0.3", default-features = false }
-ssd1306 = "0.10.0"
-embedded-graphics = "0.8.1"
-embedded-hal = "1.0.0"
-heapless = "0.9.2"
-log = { version = "0.4.29", optional = true }
-enumflags2 = "0.7.12"
-paste = "1.0.15"
 
 [build-dependencies]
 xz2 = "0.1.7"
 json = "0.12"
 const-gen = "1.6"
 
-# Split keyboard example
 [[bin]]
 name = "central"
-path = "src/bin/central.rs"
+path = "src/central.rs"
 
 [[bin]]
 name = "peripheral"
-path = "src/bin/peripheral.rs"
+path = "src/peripheral.rs"
 
 [profile.dev]
 codegen-units = 1      # better optimizations
@@ -94,5 +82,9 @@ opt-level = "z"         # optimize for binary size
 overflow-checks = false
 lto = "fat"
 
-[features]
-log = ["dep:log", "rmk/usb_log"]
+# Local vendored RMK (rev b98204928e9a8532064ce99add1f6c4c554e08c9, pristine) carrying the
+# per-profile whitelist-advertising patch. See vendor/rmk/YUYUDHAN_PATCH.md.
+# Patching `rmk` alone cascades: its ../rmk-macro, ../rmk-types, ../rmk-config
+# path-deps resolve inside the vendored tree.
+[patch."https://github.com/HaoboGu/rmk"]
+rmk = { path = "vendor/rmk/rmk" }

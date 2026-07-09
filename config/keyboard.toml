@@ -1,0 +1,314 @@
+# ============================================================================
+# sofle-rmk — PandaKB Sofle split, 2x nice!nano (nRF52840), wireless BLE.
+#   Left half  = central    (talks USB/BLE to the host, owns the keymap, runs Vial)
+#   Right half = peripheral (talks BLE to the central only)
+#
+# Ported from the ZMK config (github.com/dieselsaurav/zmk-for-sofle); layout,
+# schema conventions and the vendored BLE patch come from yuyudhan-rmk-config.
+# This file IS the firmware's keymap: read at COMPILE TIME by the RMK
+# proc-macro (via KEYBOARD_TOML_PATH in .cargo/config.toml).
+#
+# Pin map = ZMK `sofle` shield + nice!nano pro_micro mapping (verified 1:1
+# against the working ZMK overlays AND jakoritarleite/sofle-rmk).
+# ============================================================================
+[keyboard]
+name = "sofle-rmk"
+product_name = "Sofle RMK"
+vendor_id = 0x4c4b
+product_id = 0x4643
+manufacturer = "PandaKB"
+chip = "nrf52840"
+
+# ----------------------------------------------------------------------------
+# ble_profiles_num = 4 defines the User0..User7 keycodes on the MEDIA layer:
+#   User0-3 = select profile BT0-BT3, User4 = next, User5 = prev,
+#   User6 = clear-bond (ZMK BT_CLR), User7 = toggle USB/BLE (ZMK OUT_TOG).
+# The MEDIA layer below and config/vial.json hard-code these positions.
+# ----------------------------------------------------------------------------
+[rmk]
+ble_profiles_num = 4
+# 14 combos ported from ZMK (default slot limit is 8)
+combo_max_num = 16
+
+# On-chip flash storage (Vial live-remaps, BLE bonds, selected profile
+# survive power-off). Empty table = enabled with defaults.
+[storage]
+
+# ----------------------------------------------------------------------------
+# Bluetooth (host side) + battery reporting.
+# battery_adc_pin = "vddh": nRF52840 measures its own supply rail internally
+# (same as ZMK's zmk,battery-nrf-vddh in the sofle overlays — no extra wiring).
+# default_tx_power = 8 dBm, same as ZMK CONFIG_BT_CTLR_TX_PWR_PLUS_8.
+# ----------------------------------------------------------------------------
+[ble]
+enabled = true
+battery_adc_pin = "vddh"
+adc_divider_measured = 2000
+adc_divider_total = 2806
+default_tx_power = 8
+
+# Vial unlock: hold the two inner LEFT THUMB keys — electrical (4,3)+(4,4)
+# = LT(1,Space) and LT(6,Tab) — while vial.rocks shows the unlock prompt.
+[host]
+unlock_keys = [[4, 3], [4, 4]]
+
+# ----------------------------------------------------------------------------
+# ELECTRICAL matrix: 5 rows x 12 cols (6 cols per half). All 60 keys used.
+# The two inner thumb keys beside the encoders are wired at (4,5) left and
+# (4,6) right — same quirk as the ZMK transform. ,L/,R tags feed
+# unilateral_tap in the HRM morse profile.
+# ----------------------------------------------------------------------------
+[layout]
+rows = 5
+cols = 12
+layers = 8
+matrix_map = """
+(0,0,L) (0,1,L) (0,2,L) (0,3,L) (0,4,L) (0,5,L)                 (0,6,R) (0,7,R) (0,8,R)  (0,9,R) (0,10,R) (0,11,R)
+(1,0,L) (1,1,L) (1,2,L) (1,3,L) (1,4,L) (1,5,L)                 (1,6,R) (1,7,R) (1,8,R)  (1,9,R) (1,10,R) (1,11,R)
+(2,0,L) (2,1,L) (2,2,L) (2,3,L) (2,4,L) (2,5,L)                 (2,6,R) (2,7,R) (2,8,R)  (2,9,R) (2,10,R) (2,11,R)
+(3,0,L) (3,1,L) (3,2,L) (3,3,L) (3,4,L) (3,5,L) (4,5,L) (4,6,R) (3,6,R) (3,7,R) (3,8,R)  (3,9,R) (3,10,R) (3,11,R)
+                (4,0,L) (4,1,L) (4,2,L) (4,3,L) (4,4,L) (4,7,R) (4,8,R) (4,9,R) (4,10,R) (4,11,R)
+"""
+
+# ============================================================================
+# KEYMAP — 8 layers: 0-6 = the seven typing layers (Miryoku-style), 7 =
+# DISPOFF (transparent; only blanks the OLEDs, toggled by TG(7) on MEDIA).
+# Encoders per layer: [CW, CCW] — entry 0 = left encoder, entry 1 = right.
+# ============================================================================
+
+# Layer 0 — BASE. QWERTY + number row, GACS home-row mods (tap = letter,
+# hold = mod, tuned by the HRM profile). Thumbs: Escape=MEDIA Space=NAV
+# Tab=MOUSE | Enter=SYM Backspace=NUM Delete=FUN. Encoders: volume | page.
+[[layer]]
+name = "BASE"
+keys = """
+Grave                 Kc1              Kc2              Kc3               Kc4                Kc5                                        Kc6  Kc7                Kc8               Kc9              Kc0                  Equal
+Tab                   Q                W                E                 R                  T                                          Y    U                  I                 O                P                    Backspace
+MT(Escape, LCtrl, HRM) MT(A, LGui, HRM) MT(S, LAlt, HRM) MT(D, LCtrl, HRM) MT(F, LShift, HRM) G                                         H    MT(J, RShift, HRM) MT(K, RCtrl, HRM) MT(L, RAlt, HRM) MT(Quote, RGui, HRM) WM(No, LCtrl | LShift | LAlt | LGui)
+LShift                Z                X                C                 V                  B            AudioMute       Delete       N    M                  Comma             Dot              Slash                Escape
+                                       LGui             LAlt              LT(3, Escape, TL)  LT(1, Space, TL) LT(6, Tab, TL)  LT(4, Enter, TL) LT(2, Backspace, TL) LT(5, Delete, TL) RAlt         RGui
+"""
+encoders = [["AudioVolUp", "AudioVolDown"], ["PageUp", "PageDown"]]
+
+# Layer 1 — NAV (hold SPACE). Vim arrows right home row, clipboard chords
+# top right, pre-held GACS mods left home row.
+[[layer]]
+name = "NAV"
+keys = """
+_______ _______ _______ _______ _______ _______                     _______              _______     _______     _______     _______     _______
+No      No      No      No      No      No                          WM(Z, LGui | LShift) WM(V, LGui) WM(C, LGui) WM(X, LGui) WM(Z, LGui) No
+No      LGui    LAlt    LCtrl   LShift  No                          Left                 Down        Up          Right       CapsLock    No
+No      No      No      No      No      No      _______ _______     Insert               Home        PageDown    PageUp      End         No
+                _______ _______ No      No      No      Enter       Backspace            Delete      _______     _______
+"""
+encoders = [["_______", "_______"], ["_______", "_______"]]
+
+# Layer 2 — NUM (hold BACKSPACE). Columnar numpad on the left hand, mirror
+# mods on the right home row.
+[[layer]]
+name = "NUM"
+keys = """
+_______ _______     _______ _______ _______ _______                       _______ _______ _______ _______ _______ _______
+No      LeftBracket Kc7     Kc8     Kc9     RightBracket                  No      No      No      No      No      No
+No      Semicolon   Kc4     Kc5     Kc6     Equal                         No      RShift  RCtrl   RAlt    RGui    No
+No      Grave       Kc1     Kc2     Kc3     Backslash    _______ _______  No      No      No      No      No      No
+                    _______ _______ Dot     Kc0          Minus   No       No      No      _______ _______
+"""
+encoders = [["_______", "_______"], ["_______", "_______"]]
+
+# Layer 3 — MEDIA (hold ESCAPE). Media transport + all Bluetooth management:
+#   User0-3 = select BT profile 0-3    User6 = clear bond of CURRENT profile
+#   User7   = toggle output USB <-> BLE  TG(7) = blank both OLEDs (layer 7)
+# (ZMK RGB/ext-power keys not ported — no RMK support yet.)
+[[layer]]
+name = "MEDIA"
+keys = """
+_______ _______ _______ _______ _______ _______                     _______   _______        _______      _______     _______        _______
+No      No      No      No      No      No                          TG(7)     BrightnessDown BrightnessUp No          No             No
+No      LGui    LAlt    LCtrl   LShift  No                          No        MediaPrevTrack AudioVolDown AudioVolUp  MediaNextTrack No
+No      No      No      No      No      No      _______ _______     User7     User0          User1        User2       User3          User6
+                No      No      No      No      No      MediaStop   MediaPlayPause AudioMute _______      _______
+"""
+encoders = [["AudioVolUp", "AudioVolDown"], ["_______", "_______"]]
+
+# Layer 4 — SYM (hold ENTER). NUM layer with shift applied: same positions,
+# shifted symbols ({ & * ( } etc.).
+[[layer]]
+name = "SYM"
+keys = """
+_______ _______              _______      _______      _______      _______                                    _______ _______ _______ _______ _______ _______
+No      SHIFTED(LeftBracket) SHIFTED(Kc7) SHIFTED(Kc8) SHIFTED(Kc9) SHIFTED(RightBracket)                      No      No      No      No      No      No
+No      SHIFTED(Semicolon)   SHIFTED(Kc4) SHIFTED(Kc5) SHIFTED(Kc6) SHIFTED(Equal)                             No      RShift  RCtrl   RAlt    RGui    No
+No      SHIFTED(Grave)       SHIFTED(Kc1) SHIFTED(Kc2) SHIFTED(Kc3) SHIFTED(Backslash)   _______ _______       No      No      No      No      No      No
+                             _______      _______      SHIFTED(Kc9) SHIFTED(Kc0)         SHIFTED(Minus) No     No      No      _______ _______
+"""
+encoders = [["_______", "_______"], ["_______", "_______"]]
+
+# Layer 5 — FUN (hold DELETE). F-keys columnar like NUM.
+[[layer]]
+name = "FUN"
+keys = """
+_______ _______ _______ _______ _______ _______                     _______ _______ _______ _______ _______ _______
+No      F12     F7      F8      F9      PrintScreen                 No      No      No      No      No      No
+No      F11     F4      F5      F6      ScrollLock                  No      RShift  RCtrl   RAlt    RGui    No
+No      F10     F1      F2      F3      Pause   _______ _______     No      No      No      No      No      No
+                _______ _______ Menu    Space   Tab     No          No      No      _______ _______
+"""
+encoders = [["_______", "_______"], ["_______", "_______"]]
+
+# Layer 6 — MOUSE (hold TAB). Pointer on the right home row, scroll below,
+# buttons on the thumbs. ZMK MCLK/LCLK/RCLK = RMK Btn3/Btn1/Btn2.
+[[layer]]
+name = "MOUSE"
+keys = """
+_______ _______ _______ _______ _______ _______                     _______        _______        _______      _______         _______ _______
+No      No      No      No      No      No                          No             No             No           No              No      No
+No      LGui    LAlt    LCtrl   LShift  No                          MouseLeft      MouseDown      MouseUp      MouseRight      No      No
+No      No      No      No      No      No      _______ _______     MouseWheelLeft MouseWheelDown MouseWheelUp MouseWheelRight No      No
+                No      No      No      No      No      MouseBtn3   MouseBtn1      MouseBtn2      _______      _______
+"""
+encoders = [["_______", "_______"], ["_______", "_______"]]
+
+# Layer 7 — DISPOFF (toggled by TG(7) on MEDIA). Fully transparent; only
+# signals both OLED renderers (ctx.layer == 7) to blank the screens.
+[[layer]]
+name = "DISPOFF"
+keys = """
+_______ _______ _______ _______ _______ _______                     _______ _______ _______ _______ _______ _______
+_______ _______ _______ _______ _______ _______                     _______ _______ _______ _______ _______ _______
+_______ _______ _______ _______ _______ _______                     _______ _______ _______ _______ _______ _______
+_______ _______ _______ _______ _______ _______ _______ _______     _______ _______ _______ _______ _______ _______
+                _______ _______ _______ _______ _______ _______     _______ _______ _______ _______
+"""
+encoders = [["_______", "_______"], ["_______", "_______"]]
+
+# ============================================================================
+# COMBOS — ported 1:1 from the ZMK config. Actions must match the keymap
+# tokens exactly (including morse profile args) to bind to those keys.
+# ============================================================================
+[behavior.combo]
+timeout = "50ms"
+combos = [
+    # Tier 1: essential
+    { actions = ["MT(F, LShift, HRM)", "MT(J, RShift, HRM)"], output = "CapsWordToggle" },
+    { actions = ["W", "E"], output = "Escape" },
+    { actions = ["I", "O"], output = "Backspace" },
+    { actions = ["O", "P"], output = "Delete" },
+    # Tier 2: high value
+    { actions = ["MT(S, LAlt, HRM)", "MT(D, LCtrl, HRM)"], output = "Tab" },
+    { actions = ["MT(K, RCtrl, HRM)", "MT(L, RAlt, HRM)"], output = "Enter" },
+    { actions = ["X", "C"], output = "WM(C, LGui)" },
+    { actions = ["C", "V"], output = "WM(V, LGui)" },
+    { actions = ["X", "V"], output = "WM(X, LGui)" },
+    # Tier 3: vertical symbol combos
+    { actions = ["MT(J, RShift, HRM)", "M"], output = "Minus" },
+    { actions = ["H", "N"], output = "SHIFTED(Minus)" },
+    { actions = ["MT(F, LShift, HRM)", "V"], output = "Equal" },
+    { actions = ["MT(S, LAlt, HRM)", "X"], output = "Grave" },
+    { actions = ["MT(L, RAlt, HRM)", "MT(Quote, RGui, HRM)"], output = "Semicolon" },
+]
+
+# ============================================================================
+# TAP-HOLD ("morse") tuning — timings carried over from the ZMK config:
+# tapping-term 200ms, require-prior-idle 150ms, quick-tap 175ms.
+#   HRM (home-row mods): flow-tap + permissive-hold + unilateral_tap —
+#     biased hard toward "it's a letter" (ZMK mt tap-preferred + prior-idle).
+#   TL (thumb layer-taps): flow-tap OFF (holding Space for NAV mid-streak
+#     must not force a literal space), permissive-hold ≈ ZMK lt "balanced".
+# ============================================================================
+[behavior.morse]
+enable_flow_tap = true
+prior_idle_time = "150ms"
+hold_timeout = "200ms"
+gap_timeout = "175ms"
+
+[behavior.morse.profiles]
+HRM = { enable_flow_tap = true, permissive_hold = true, unilateral_tap = true, hold_timeout = "200ms", gap_timeout = "175ms" }
+TL = { enable_flow_tap = false, permissive_hold = true, hold_timeout = "200ms", gap_timeout = "175ms" }
+
+# ============================================================================
+# SPLIT — halves talk BLE; only the central talks to the computer.
+# ble_addr: fixed static random addresses; the halves find each other by
+# these (unique per half, distinct from any other RMK board in range).
+# ============================================================================
+[split]
+connection = "ble"
+
+# ---- LEFT half = central ----
+[split.central]
+rows = 5
+cols = 6
+row_offset = 0
+col_offset = 0
+ble_addr = [0x42, 0x99, 0x33, 0x81, 0xc1, 0xc7]
+battery_adc_pin = "vddh"
+adc_divider_measured = 2000
+adc_divider_total = 2806
+
+# Sofle left wiring: rows pro_micro 5,6,7,8,9; cols 19,18,15,14,16,10.
+[split.central.matrix]
+matrix_type = "normal"
+debouncer = "fast"
+row_pins = ["P0_24", "P1_00", "P0_11", "P1_04", "P1_06"]
+col_pins = ["P0_02", "P1_15", "P1_13", "P1_11", "P0_10", "P0_09"]
+
+# Left rotary encoder (EC11, pro_micro A=21/B=20). resolution 4 = ZMK's
+# 80 steps / 20 detents per rotation.
+[[split.central.input_device.encoder]]
+pin_a = "P0_31"
+pin_b = "P0_29"
+phase = "resolution"
+resolution = 4
+
+# Central OLED — SSD1306 128x32 portrait, custom status renderer
+# (layer / WPM / BLE profile / battery / version). Event-driven only.
+# If content renders upside-down, change rotation to 270.
+[split.central.display]
+driver = "ssd1306"
+size = "128x32"
+rotation = 90
+renderer = "crate::status::StatusRenderer"
+
+[split.central.display.protocol.i2c]
+instance = "TWISPI0"
+sda = "P0_17"
+scl = "P0_20"
+
+# ---- RIGHT half = peripheral ----
+[[split.peripheral]]
+rows = 5
+cols = 6
+row_offset = 0
+col_offset = 6
+ble_addr = [0x7f, 0x12, 0x74, 0x9f, 0x67, 0xe3]
+battery_adc_pin = "vddh"
+adc_divider_measured = 2000
+adc_divider_total = 2806
+
+# Right half mirrors the left: cols pro_micro 10,16,14,15,18,19.
+[split.peripheral.matrix]
+matrix_type = "normal"
+debouncer = "fast"
+row_pins = ["P0_24", "P1_00", "P0_11", "P1_04", "P1_06"]
+col_pins = ["P0_09", "P0_10", "P1_11", "P1_13", "P1_15", "P0_02"]
+
+# Right rotary encoder (A/B swapped vs left, matching the ZMK overlay).
+[[split.peripheral.input_device.encoder]]
+pin_a = "P0_29"
+pin_b = "P0_31"
+phase = "resolution"
+resolution = 4
+
+# Peripheral OLED — decorative renderer with split-link ✓/✗ indicator,
+# WPM equalizer and battery. render_interval drives the idle animation.
+[split.peripheral.display]
+driver = "ssd1306"
+size = "128x32"
+rotation = 90
+renderer = "crate::trishul::TrishulRenderer"
+render_interval = 400
+
+[split.peripheral.display.protocol.i2c]
+instance = "TWISPI0"
+sda = "P0_17"
+scl = "P0_20"

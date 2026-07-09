@@ -29,4 +29,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sofle-rmk-firmware
-          path: build/*.uf2
+          path: |
+            build/rmk-central.uf2
+            build/rmk-peripheral.uf2

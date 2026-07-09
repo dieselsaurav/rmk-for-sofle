@@ -1,0 +1,248 @@
+--- /Users/ankur/.cargo/git/checkouts/rmk-cd9707f7f2031ce2/b982049/rmk/src/ble/mod.rs	2026-07-01 11:24:24
++++ vendor/rmk/rmk/src/ble/mod.rs	2026-07-03 15:20:51
+@@ -1,6 +1,6 @@
+ use core::sync::atomic::AtomicBool;
+ 
+-use bt_hci::cmd::le::{LeReadLocalSupportedFeatures, LeSetPhy};
++use bt_hci::cmd::le::{LeAddDeviceToFilterAcceptList, LeClearFilterAcceptList, LeReadLocalSupportedFeatures, LeSetPhy};
+ use bt_hci::controller::{ControllerCmdAsync, ControllerCmdSync};
+ use embassy_futures::join::join;
+ use embassy_futures::select::{Either, Either3, select, select3};
+@@ -26,7 +26,7 @@
+ use crate::event::SubscribableEvent;
+ use crate::hid::{HidWriterTrait, run_led_reader};
+ #[cfg(feature = "split")]
+-use crate::split::ble::central::CENTRAL_SLEEP;
++use crate::split::ble::central::{CENTRAL_SLEEP, SPLIT_LINK_CHANGED, all_peripherals_connected};
+ use crate::state::set_ble_state;
+ 
+ pub(crate) mod battery_service;
+@@ -75,7 +75,11 @@
+ pub struct BleTransport<'b, 's, C>
+ where
+     's: 'b,
+-    C: Controller + ControllerCmdAsync<LeSetPhy> + ControllerCmdSync<LeReadLocalSupportedFeatures>,
++    C: Controller
++        + ControllerCmdAsync<LeSetPhy>
++        + ControllerCmdSync<LeReadLocalSupportedFeatures>
++        + ControllerCmdSync<LeClearFilterAcceptList>
++        + ControllerCmdSync<LeAddDeviceToFilterAcceptList>,
+ {
+     stack: &'b Stack<'s, C, DefaultPacketPool>,
+     server: Server<'static>,
+@@ -87,7 +91,11 @@
+ impl<'b, 's, C> BleTransport<'b, 's, C>
+ where
+     's: 'b,
+-    C: Controller + ControllerCmdAsync<LeSetPhy> + ControllerCmdSync<LeReadLocalSupportedFeatures>,
++    C: Controller
++        + ControllerCmdAsync<LeSetPhy>
++        + ControllerCmdSync<LeReadLocalSupportedFeatures>
++        + ControllerCmdSync<LeClearFilterAcceptList>
++        + ControllerCmdSync<LeAddDeviceToFilterAcceptList>,
+ {
+     pub async fn new(stack: &'b Stack<'s, C, DefaultPacketPool>, rmk_config: RmkConfig<'static>) -> Self {
+         #[cfg(feature = "_nrf_ble")]
+@@ -141,7 +149,11 @@
+ impl<'b, 's, C> Runnable for BleTransport<'b, 's, C>
+ where
+     's: 'b,
+-    C: Controller + ControllerCmdAsync<LeSetPhy> + ControllerCmdSync<LeReadLocalSupportedFeatures>,
++    C: Controller
++        + ControllerCmdAsync<LeSetPhy>
++        + ControllerCmdSync<LeReadLocalSupportedFeatures>
++        + ControllerCmdSync<LeClearFilterAcceptList>
++        + ControllerCmdSync<LeAddDeviceToFilterAcceptList>,
+ {
+     async fn run(&mut self) -> ! {
+         // Load the preferred connection from storage
+@@ -163,13 +175,50 @@
+ 
+         let connection_loop = async {
+             loop {
+-                match select(
+-                    advertise(product_name, &mut peripheral, server),
++                // YUYUDHAN PATCH v2 (whitelist advertising, gated on split health):
++                // when the active profile has a bond whose identity carries an IRK,
++                // advertise filtered to that peer so no other bonded host can steal
++                // the connection slot. Profiles without a bond (or without an IRK the
++                // controller could resolve) advertise open.
++                //
++                // The filter is additionally gated on every split peripheral being
++                // linked: filtered advertising owns the controller's single filter
++                // accept list, which the split central must program to (re)connect a
++                // peripheral. While any peripheral is down we advertise open so the
++                // list stays free, and SPLIT_LINK_CHANGED restarts advertising on
++                // every link transition (reset BEFORE reading the count so a
++                // transition in between latches a wake instead of being lost).
++                #[cfg(feature = "split")]
++                SPLIT_LINK_CHANGED.reset();
++                #[cfg(feature = "split")]
++                let split_healthy = all_peripherals_connected();
++                #[cfg(not(feature = "split"))]
++                let split_healthy = true;
++
++                #[cfg(feature = "storage")]
++                let peer: Option<Address> = profile_manager
++                    .active_bond_info()
++                    .filter(|_| split_healthy)
++                    .filter(|p| p.info.identity.irk.is_some())
++                    .map(|p| p.info.identity.addr);
++                #[cfg(not(feature = "storage"))]
++                let peer: Option<Address> = None;
++
++                let split_link_watch = async {
++                    #[cfg(feature = "split")]
++                    SPLIT_LINK_CHANGED.wait().await;
++                    #[cfg(not(feature = "split"))]
++                    core::future::pending::<()>().await;
++                };
++
++                match select3(
++                    advertise(product_name, &mut peripheral, server, peer),
+                     profile_manager.update_profile(),
++                    split_link_watch,
+                 )
+                 .await
+                 {
+-                    Either::First(Ok(conn)) => {
++                    Either3::First(Ok(conn)) => {
+                         // Do NOT emit BleState::Connected here. gatt_events_task emits
+                         // Connected when it sees GattConnectionEvent::Encrypted.
+                         #[cfg(feature = "storage")]
+@@ -198,7 +247,7 @@
+                             }
+                         }
+                     }
+-                    Either::First(Err(BleHostError::BleHost(Error::Timeout))) => {
++                    Either3::First(Err(BleHostError::BleHost(Error::Timeout))) => {
+                         warn!("Advertising timeout, sleep and wait for any key");
+                         set_ble_state(BleState::Inactive);
+ 
+@@ -213,13 +262,16 @@
+                         #[cfg(feature = "split")]
+                         CENTRAL_SLEEP.signal(false);
+                     }
+-                    Either::First(Err(e)) => {
++                    Either3::First(Err(e)) => {
+                         #[cfg(feature = "defmt")]
+                         let e = defmt::Debug2Format(&e);
+                         error!("Advertise error: {:?}", e);
+                         Timer::after_millis(200).await;
+                     }
+-                    Either::Second(()) => {}
++                    Either3::Second(()) => {}
++                    // YUYUDHAN PATCH v2: split link came up or went down — loop to
++                    // recompute the whitelist gate and restart advertising.
++                    Either3::Third(()) => {}
+                 };
+ 
+                 // Skip the Inactive transition if we never moved off Advertising
+@@ -525,11 +577,15 @@
+ }
+ 
+ /// Create an advertiser to use to connect to a BLE Central, and wait for it to connect.
+-async fn advertise<'a, 'b, C: Controller>(
++async fn advertise<'a, 'b, C>(
+     name: &'a str,
+     peripheral: &mut Peripheral<'a, C, DefaultPacketPool>,
+     server: &'b Server<'_>,
+-) -> Result<GattConnection<'a, 'b, DefaultPacketPool>, BleHostError<C::Error>> {
++    peer: Option<Address>,
++) -> Result<GattConnection<'a, 'b, DefaultPacketPool>, BleHostError<C::Error>>
++where
++    C: Controller + ControllerCmdSync<LeClearFilterAcceptList> + ControllerCmdSync<LeAddDeviceToFilterAcceptList>,
++{
+     // Wait for 10ms to ensure the USB is checked
+     embassy_time::Timer::after_millis(10).await;
+     let mut advertiser_data = [0; 31];
+@@ -546,15 +602,32 @@
+         &mut advertiser_data[..],
+     )?;
+ 
++    // YUYUDHAN PATCH (whitelist advertising): a bonded profile advertises filtered
++    // to its peer only (invisible + unconnectable for every other host); an empty
++    // profile advertises unfiltered so new hosts can pair.
+     let advertise_config = AdvertisementParameters {
+         primary_phy: PhyKind::Le2M,
+         secondary_phy: PhyKind::Le2M,
+         tx_power: TxPower::Plus8dBm,
+         interval_min: Duration::from_millis(200),
+         interval_max: Duration::from_millis(200),
++        filter_policy: if peer.is_some() {
++            AdvFilterPolicy::FilterConnAndScan
++        } else {
++            AdvFilterPolicy::Unfiltered
++        },
+         ..Default::default()
+     };
+ 
++    // YUYUDHAN PATCH v2: only program the accept list when actually advertising
++    // filtered. The same list is the split central's reconnect mechanism, so the
++    // open path must make ZERO HCI calls against it — not even a clear. A stale
++    // entry left behind is harmless: with Unfiltered policy the list is unused,
++    // and the split's connect() clears and reprograms it as needed.
++    if let Some(p) = peer {
++        peripheral.set_filter_accept_list(&[p]).await?;
++    }
++
+     info!("[adv] advertising");
+     set_ble_state(BleState::Advertising);
+     let advertiser = peripheral
+--- /Users/ankur/.cargo/git/checkouts/rmk-cd9707f7f2031ce2/b982049/rmk/src/split/ble/central.rs	2026-07-01 11:24:24
++++ vendor/rmk/rmk/src/split/ble/central.rs	2026-07-03 15:17:38
+@@ -1,5 +1,5 @@
+ use core::cell::RefCell;
+-use core::sync::atomic::Ordering;
++use core::sync::atomic::{AtomicU8, Ordering};
+ 
+ use bt_hci::cmd::le::{LeReadLocalSupportedFeatures, LeSetPhy, LeSetScanParams};
+ use bt_hci::controller::{ControllerCmdAsync, ControllerCmdSync};
+@@ -28,6 +28,21 @@
+ static STOP_SCANNING: Signal<crate::RawMutex, ()> = Signal::new();
+ static SCANNING_MUTEX: Mutex<crate::RawMutex, ()> = Mutex::new(());
+ 
++// YUYUDHAN PATCH v2 (whitelist gating): live count of connected split
++// peripherals + a change signal, consumed by the host advertising loop in
++// `ble/mod.rs`. Filtered (whitelisted) advertising owns the controller's
++// single filter accept list — the same list `Central::connect` must program
++// to (re)connect a peripheral. The host side therefore only advertises
++// filtered while every peripheral is linked, and restarts advertising on
++// every link transition.
++pub(crate) static CONNECTED_PERIPHERALS: AtomicU8 = AtomicU8::new(0);
++pub(crate) static SPLIT_LINK_CHANGED: Signal<crate::RawMutex, ()> = Signal::new();
++
++/// True when every configured split peripheral currently holds a live link.
++pub(crate) fn all_peripherals_connected() -> bool {
++    CONNECTED_PERIPHERALS.load(Ordering::Relaxed) as usize >= crate::SPLIT_PERIPHERALS_NUM
++}
++
+ /// Sleep management signal for BLE Split Central
+ ///
+ /// This signal serves dual purposes for sleep management:
+@@ -230,6 +245,10 @@
+                     connected: true,
+                 });
+ 
++                // YUYUDHAN PATCH v2: link up — re-arm whitelisted host advertising.
++                CONNECTED_PERIPHERALS.fetch_add(1, Ordering::Relaxed);
++                SPLIT_LINK_CHANGED.signal(());
++
+                 if let Err(e) =
+                     run_central_manager_task::<_, _, ROW, COL, ROW_OFFSET, COL_OFFSET>(peri_id, stack, &conn).await
+                 {
+@@ -237,6 +256,14 @@
+                     let e = defmt::Debug2Format(&e);
+                     error!("BLE central error: {:?}", e);
+                 }
++
++                // YUYUDHAN PATCH v2: link down — host advertising must go open so
++                // the filter accept list is free for the reconnect. Saturating so a
++                // spurious extra call can never wrap the counter to "healthy".
++                let _ = CONNECTED_PERIPHERALS.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
++                    Some(n.saturating_sub(1))
++                });
++                SPLIT_LINK_CHANGED.signal(());
+             }
+             Ok(Err(e)) => {
+                 #[cfg(feature = "defmt")]

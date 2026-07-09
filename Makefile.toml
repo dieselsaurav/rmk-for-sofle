@@ -1,13 +1,19 @@
+# cargo-make build chain for the yuyudhan-1 RMK firmware.
+# All build outputs go into ./build/ (a gitignored staging dir), NEVER the repo
+# root. `just build` then moves the final .uf2(s) into firmware/<datetime>/.
+# `build/` holds throwaway staging; firmware/<datetime>/ holds kept snapshots.
+
 [tasks.install-llvm-tools]
 install_crate = { rustup_component_name = "llvm-tools" }
 
 [tasks.flip-link]
 install_crate = { crate_name = "flip-link", binary = "flip-link", test_arg = ["-h"] }
 
-[tasks.build]
-command = "cargo"
-args = ["build", "--release", "-F ${@}"]
-dependencies = ["install-llvm-tools", "flip-link"]
+# Ensure the staging dir exists before objcopy writes into it (objcopy will not
+# create parent directories on its own).
+[tasks.prepare-build-dir]
+command = "mkdir"
+args = ["-p", "build"]
 
 [tasks.objcopy-central]
 install_crate = { crate_name = "cargo-binutils", binary = "cargo", test_arg = [
@@ -17,16 +23,15 @@ install_crate = { crate_name = "cargo-binutils", binary = "cargo", test_arg = [
 command = "cargo"
 args = [
     "objcopy",
+    "--release",
     "--bin",
     "central",
-    "--features=${@}",
-    "--release",
     "--",
     "-O",
     "ihex",
-    "build/sofle-rmk-central.hex",
+    "build/rmk-central.hex",
 ]
-dependencies = ["build"]
+dependencies = ["install-llvm-tools", "flip-link", "prepare-build-dir"]
 
 [tasks.objcopy-peripheral]
 install_crate = { crate_name = "cargo-binutils", binary = "cargo", test_arg = [
@@ -36,16 +41,15 @@ install_crate = { crate_name = "cargo-binutils", binary = "cargo", test_arg = [
 command = "cargo"
 args = [
     "objcopy",
+    "--release",
     "--bin",
     "peripheral",
-    "--features=${@}",
-    "--release",
     "--",
     "-O",
     "ihex",
-    "build/sofle-rmk-peripheral.hex",
+    "build/rmk-peripheral.hex",
 ]
-dependencies = ["build"]
+dependencies = ["install-llvm-tools", "flip-link", "prepare-build-dir"]
 
 [tasks.uf2-central]
 install_crate = { crate_name = "cargo-hex-to-uf2", binary = "cargo", test_arg = [
@@ -56,9 +60,9 @@ command = "cargo"
 args = [
     "hex-to-uf2",
     "--input-path",
-    "build/sofle-rmk-central.hex",
+    "build/rmk-central.hex",
     "--output-path",
-    "build/sofle-rmk-central.uf2",
+    "build/rmk-central.uf2",
     "--family",
     "nrf52840",
 ]
@@ -73,9 +77,9 @@ command = "cargo"
 args = [
     "hex-to-uf2",
     "--input-path",
-    "build/sofle-rmk-peripheral.hex",
+    "build/rmk-peripheral.hex",
     "--output-path",
-    "build/sofle-rmk-peripheral.uf2",
+    "build/rmk-peripheral.uf2",
     "--family",
     "nrf52840",
 ]
