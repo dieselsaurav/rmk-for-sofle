@@ -88,7 +88,7 @@ MT(Escape, LCtrl, HRM) MT(A, LGui, HRM) MT(S, LAlt, HRM) MT(D, LCtrl, HRM) MT(F,
 LShift                Z                X                C                 V                  B            AudioMute       Delete       N    M                  Comma             Dot              Slash                Escape
                                        LGui             LAlt              LT(3, Escape, TL)  LT(1, Space, TL) LT(6, Tab, TL)  LT(4, Enter, TL) LT(2, Backspace, TL) LT(5, Delete, TL) RAlt         RGui
 """
-encoders = [["AudioVolUp", "AudioVolDown"]]
+encoders = [["AudioVolUp", "AudioVolDown"], ["PageUp", "PageDown"]]
 
 # Layer 1 — NAV (hold SPACE). Vim arrows right home row, clipboard chords
 # top right, pre-held GACS mods left home row.
@@ -101,7 +101,7 @@ No      LGui    LAlt    LCtrl   LShift  No                          Left        
 No      No      No      No      No      No      _______ _______     Insert               Home        PageDown    PageUp      End         No
                 _______ _______ No      No      No      Enter       Backspace            Delete      _______     _______
 """
-encoders = [["_______", "_______"]]
+encoders = [["_______", "_______"], ["_______", "_______"]]
 
 # Layer 2 — NUM (hold BACKSPACE). Columnar numpad on the left hand, mirror
 # mods on the right home row.
@@ -114,7 +114,7 @@ No      Semicolon   Kc4     Kc5     Kc6     Equal                         No    
 No      Grave       Kc1     Kc2     Kc3     Backslash    _______ _______  No      No      No      No      No      No
                     _______ _______ Dot     Kc0          Minus   No       No      No      _______ _______
 """
-encoders = [["_______", "_______"]]
+encoders = [["_______", "_______"], ["_______", "_______"]]
 
 # Layer 3 — MEDIA (hold ESCAPE). Media transport + all Bluetooth management:
 #   User0-3 = select BT profile 0-3    User6 = clear bond of CURRENT profile
@@ -129,7 +129,7 @@ No      LGui    LAlt    LCtrl   LShift  No                          No        Me
 No      No      No      No      No      No      _______ _______     User7     User0          User1        User2       User3          User6
                 No      No      No      No      No      MediaStop   MediaPlayPause AudioMute _______      _______
 """
-encoders = [["AudioVolUp", "AudioVolDown"]]
+encoders = [["AudioVolUp", "AudioVolDown"], ["_______", "_______"]]
 
 # Layer 4 — SYM (hold ENTER). NUM layer with shift applied: same positions,
 # shifted symbols ({ & * ( } etc.).
@@ -142,7 +142,7 @@ No      SHIFTED(Semicolon)   SHIFTED(Kc4) SHIFTED(Kc5) SHIFTED(Kc6) SHIFTED(Equa
 No      SHIFTED(Grave)       SHIFTED(Kc1) SHIFTED(Kc2) SHIFTED(Kc3) SHIFTED(Backslash)   _______ _______       No      No      No      No      No      No
                              _______      _______      SHIFTED(Kc9) SHIFTED(Kc0)         SHIFTED(Minus) No     No      No      _______ _______
 """
-encoders = [["_______", "_______"]]
+encoders = [["_______", "_______"], ["_______", "_______"]]
 
 # Layer 5 — FUN (hold DELETE). F-keys columnar like NUM.
 [[layer]]
@@ -154,7 +154,7 @@ No      F11     F4      F5      F6      ScrollLock                  No      RShi
 No      F10     F1      F2      F3      Pause   _______ _______     No      No      No      No      No      No
                 _______ _______ Menu    Space   Tab     No          No      No      _______ _______
 """
-encoders = [["_______", "_______"]]
+encoders = [["_______", "_______"], ["_______", "_______"]]
 
 # Layer 6 — MOUSE (hold TAB). Pointer on the right home row, scroll below,
 # buttons on the thumbs. ZMK MCLK/LCLK/RCLK = RMK Btn3/Btn1/Btn2.
@@ -167,7 +167,7 @@ No      LGui    LAlt    LCtrl   LShift  No                          MouseLeft   
 No      No      No      No      No      No      _______ _______     MouseWheelLeft MouseWheelDown MouseWheelUp MouseWheelRight No      No
                 No      No      No      No      No      MouseBtn3   MouseBtn1      MouseBtn2      _______      _______
 """
-encoders = [["_______", "_______"]]
+encoders = [["_______", "_______"], ["_______", "_______"]]
 
 # Layer 7 — DISPOFF (toggled by TG(7) on MEDIA). Fully transparent; only
 # signals both OLED renderers (ctx.layer == 7) to blank the screens.
@@ -180,7 +180,7 @@ _______ _______ _______ _______ _______ _______                     _______ ____
 _______ _______ _______ _______ _______ _______ _______ _______     _______ _______ _______ _______ _______ _______
                 _______ _______ _______ _______ _______ _______     _______ _______ _______ _______
 """
-encoders = [["_______", "_______"]]
+encoders = [["_______", "_______"], ["_______", "_______"]]
 
 # ============================================================================
 # COMBOS — ported 1:1 from the ZMK config. Actions must match the keymap
@@ -295,14 +295,17 @@ matrix_type = "normal"
 row_pins = ["P0_24", "P1_00", "P0_11", "P1_04", "P1_06"]
 col_pins = ["P0_09", "P0_10", "P1_11", "P1_13", "P1_15", "P0_02"]
 
-# Right rotary encoder: DISABLED FOR TEST — suspected of flooding the split
-# link with phantom rotation events (stuck/repeating keys on the right half).
-# [[split.peripheral.input_device.encoder]]
-# pin_a = "P0_29"
-# pin_b = "P0_31"
-# internal_pullup = true
-# phase = "resolution"
-# resolution = 4
+# Right rotary encoder (A/B swapped vs left, matching the ZMK overlay).
+# debounce_ms filters phantom-event bursts: this encoder was implicated in
+# flooding the split link (stuck/repeating right-half keys). If those
+# symptoms return, disable this block again.
+[[split.peripheral.input_device.encoder]]
+pin_a = "P0_29"
+pin_b = "P0_31"
+internal_pullup = true
+phase = "resolution"
+resolution = 4
+debounce_ms = 10
 
 # Peripheral OLED — decorative renderer with split-link ✓/✗ indicator,
 # WPM equalizer and battery. render_interval drives the idle animation.
