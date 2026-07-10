@@ -76,6 +76,16 @@ must first re-flash the
 [nice!nano bootloader](https://nicekeyboards.com/docs/nice-nano/troubleshooting#my-nicenano-seems-to-be-acting-up-and-i-want-to-re-flash-the-bootloader)**,
 then flash ZMK as usual.
 
+## Hardware note: the disconnect saga
+
+This keyboard had months of random right-half disconnects on ZMK (worse at
+low battery, masked by USB power) and stuck/repeating keys early in this
+port. After exhausting firmware fixes, the root cause turned out to be a
+**faulty nice!nano module on the right half** — replacing the MCU fixed it.
+If you see similar chaos that resists firmware logic: suspect the module.
+(The firmware hygiene it prompted — default deferred debouncer, encoder
+internal pull-ups + event debounce — is kept.)
+
 ## Not ported (RMK gaps)
 
 - **RGB underglow** — RMK lighting support is still maturing; ZMK `rgb_ug` keys dropped.
