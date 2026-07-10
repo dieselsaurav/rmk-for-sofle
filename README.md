@@ -15,6 +15,15 @@ Miryoku-style: QWERTY base with GACS home row mods, 7 typing layers
 the OLEDs (TG(7) on MEDIA), 14 combos (caps word on F+J, vertical symbol
 combos, ...), encoders (volume | page scroll). Left half = central.
 
+![keymap](sofle-rmk_keymap.svg)
+
+Regenerate after keymap changes (needs `keymap-drawer` on PATH):
+
+```sh
+python3 scripts/keymap_docs.py svg  --toml config/keyboard.toml --out sofle-rmk_keymap.svg
+python3 scripts/keymap_docs.py html --toml config/keyboard.toml --out sofle-rmk-viewer.html
+```
+
 Keymap lives in `config/keyboard.toml` (compile-time) and is editable live
 with [Vial](https://vial.rocks) — unlock by holding the two inner left thumb
 keys. BLE keys on MEDIA: User0-3 = profile BT0-BT3, User6 = clear bond,
