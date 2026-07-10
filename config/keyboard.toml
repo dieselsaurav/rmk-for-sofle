@@ -29,6 +29,10 @@ chip = "nrf52840"
 ble_profiles_num = 4
 # 14 combos ported from ZMK (default slot limit is 8)
 combo_max_num = 16
+# Light sleep after 10 min idle (mirrors the ZMK IDLE_TIMEOUT): displays
+# blank, RGB off, split link relaxes to a 200 ms interval; any key wakes.
+# (RMK has no ZMK-style System-OFF deep sleep yet — roadmap item.)
+split_central_sleep_timeout_seconds = 600
 
 # On-chip flash storage (Vial live-remaps, BLE bonds, selected profile
 # survive power-off). Empty table = enabled with defaults.
